@@ -12,7 +12,7 @@ Build a customer-facing agent for airline disruptions that:
 - Executes and records allowed actions
 - Escalates requests outside the agent's authority
 
-## Architecture (for the demo video)
+## Architecture ()
 
 The agent is built as two deliberately separate layers, so policy can never
 drift even if the language model changes what it says:
@@ -70,6 +70,20 @@ LLM (when enabled) only ever rewrites a decision that was already made by
 plain Python — it cannot approve an escalation, invent a compensation
 amount, or change what the customer is entitled to.
 
+##  Assumptions
+
+Everything the agent knows comes from the supplied data pack — nothing was invented. Where the brief or the data pack left a detail unstated, the following conservative assumptions were made, and each one narrows the agent's authority rather than widening it:
+
+Meal voucher value — stated as a concrete ₹500 rather than left vague, so the reply can be specific instead of hand-wavy.
+Refund method and timeline — refunds go to the original payment method only, processed within 7 business days, per the Refund Processing Rule. Refunding to a different method is explicitly prohibited.
+"Full night" vs. delayed-hours hotel — a full night's stay is treated as different from the delayed-hours accommodation the policy actually covers (delay > 5h). A full-night request is always escalated, even when a delayed-hours stay would otherwise be approved.
+Tier benefits are procedural, not financial — Gold/Platinum tier gets priority rebooking language only; tier does not unlock any additional compensation, since the data pack doesn't authorise that.
+Fare-difference waiver threshold (₹1,500) — applied literally: any quoted fare difference at or under the limit is treated as within agent authority to waive; anything above it is escalated for supervisor approval. The engine flags an above-threshold fare difference for awareness but only raises it as an escalation if the customer actually asks for the difference to be waived.
+"Ask only necessary questions" — the agent only asks a clarifying question when intent genuinely can't be determined from the message (ask_clarify); it never asks the customer to re-confirm information (tier, PNR, flight) already present in their profile or booking record.
+Legal / formal-complaint language always wins — any mention of legal action or a formal complaint short-circuits the rest of the analysis and is escalated immediately, even if the same message also contains a request the agent could otherwise fulfil.
+Angry or frustrated tone doesn't change what's approved — detected anger only changes the opening line of the reply (an apology first); it never expands what the agent is allowed to do.
+Return-leg data is display-only — the one return flight present in the data pack (Priya Nair's) is shown for context in the booking record but is never read by the policy engine, since the assignment scenarios don't involve a return-leg disruption.
+No data outside the supplied pack — no live PNR lookup, external API, or database; if a customer or PNR isn't in data.py, the app has no way to act on it, by design.
 ## Tech stack
 
 - Python + Streamlit (UI)
